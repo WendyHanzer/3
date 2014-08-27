@@ -1,4 +1,5 @@
 CS480Forkner
 ============
 
-Repository for my CS480 (Computer Graphics) assignments
+Programming assignments for CS 480 by Chris Forkner
+
