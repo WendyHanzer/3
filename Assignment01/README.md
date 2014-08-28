@@ -6,7 +6,7 @@ Building This Example
 
 To build this example just 
 
->$ cd build
+>$ cd build 
 >$ make
 
 The excutable will be put in bin

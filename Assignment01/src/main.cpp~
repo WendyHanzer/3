@@ -1,14 +1,12 @@
-
-
 #include <GL/glew.h> // glew must be included before the main gl libs
 #include <GL/freeglut.h> // doing otherwise causes compiler shouting
 #include <iostream>
 #include <chrono>
+
 #define GLM_FORCE_RADIANS // added to remove warning messages about depreciaton
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> //Makes passing matrices to shaders easier
-
 
 //--Data types
 //This object will define the attributes of a vertex(position, color, etc...)

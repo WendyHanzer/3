@@ -8,7 +8,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> //Makes passing matrices to shaders easier
 
-
 //--Data types
 //This object will define the attributes of a vertex(position, color, etc...)
 struct Vertex
@@ -18,7 +17,7 @@ struct Vertex
 };
 
 //--Evil Global variables
-//Just for this example!
+//Just for this example
 int w = 640, h = 480;// Window size
 GLuint program;// The GLSL program handle
 GLuint vbo_geometry;// VBO handle for our geometry
