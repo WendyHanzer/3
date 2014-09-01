@@ -148,7 +148,7 @@ void update()
     //float rotationSpeed = dt * M_PI/2;
 
     angle += dt * M_PI/2; //move through 90 degrees a second
-    rotateAngle -= dt * M_PI/4;
+    rotateAngle -= dt * M_PI/4; // move the opposite direction at 45 degrees/second
 
     // move to origin
     model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
@@ -158,6 +158,7 @@ void update()
 
     // make cube orbit
     model = glm::translate( model, glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
+
     // Update the state of the scene
     glutPostRedisplay();//call the display callback
 }
