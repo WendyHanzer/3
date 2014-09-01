@@ -8,6 +8,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> //Makes passing matrices to shaders easier
 
+#include "shaderLoader.h"
+
 //--Data types
 //This object will define the attributes of a vertex(position, color, etc...)
 struct Vertex
@@ -52,7 +54,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 
 //--Main
 int main(int argc, char **argv)
-{
+{ 
     // Initialize glut
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
@@ -140,13 +142,22 @@ void update()
 {
     //total time
     static float angle = 0.0;
+    static float rotateAngle = 0.0;
     float dt = getDT();// if you have anything moving, use dt.
 
     //float rotationSpeed = dt * M_PI/2;
 
     angle += dt * M_PI/2; //move through 90 degrees a second
-    model = glm::translate( glm::mat4(1.0f), glm::vec3(4.0 * sin(angle), 0.0, 4.0 * cos(angle)));
-    //model = glm::rotate( model, rotationSpeed, glm::vec3(0.0,0.0,1.0));
+    rotateAngle -= dt * M_PI/4;
+
+    // move to origin
+    model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
+
+    // rotate from origin
+    model = glm::rotate( glm::mat4(1.0f), rotateAngle, glm::vec3(0.0,1.0,0.0));
+
+    // make cube orbit
+    model = glm::translate( model, glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
     // Update the state of the scene
     glutPostRedisplay();//call the display callback
 }
