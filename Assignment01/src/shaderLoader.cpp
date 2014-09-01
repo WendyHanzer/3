@@ -1,29 +1,79 @@
 #include "shaderLoader.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 
-shader::shader()
+shaderLoader::shaderLoader()
 {
- shaderData = new char[500];
+ // delcare class data
+ shaderData = "";
+
  shaderName = "default";
  shaderFile = "nope";
- isFragmentShader = false;
+ FragmentShader = false;
+ dataIsSet = false;
 }
 
-shader::shader(std::string name, std::string file, bool isFrag)
+shaderLoader::shaderLoader(std::string name, std::string file, bool isFrag)
 {
- shaderData = new char[500];
+ std::stringstream strStream;
+
  shaderName = name;
  shaderFile = file;
- isFragmentShader = isFrag;
+ FragmentShader = isFrag;
+
+ // initalize default to data not found
+ dataIsSet = false;
+
+ // retrieve data from file
+ std::ifstream fin;
+ fin.clear();
+ fin.open(shaderFile.c_str());
+
+ if(fin.good())
+   {
+    dataIsSet = true;
+   }
+
+ strStream << fin.rdbuf();
+
+ shaderData = strStream.str();
+
+ fin.close();
 }
 
-shader::~shader()
+shaderLoader::~shaderLoader()
 {
- delete [] shaderData;
+ 
 }
 
-void shader::printStuff()
+void shaderLoader::printStuff()
 {
- std::cout<<"this is a test"<<std::endl;
+ std::cout<<std::endl<<std::endl;
+
+ std::cout<<shaderData<<std::endl;
+
+
+ std::cout<<std::endl<<std::endl;
 }
+
+bool shaderLoader::isFragmentShader() const
+{
+ return FragmentShader;
+}
+
+bool shaderLoader::isVertexShader() const
+{
+ return !FragmentShader;
+}
+
+const char* shaderLoader::getShaderData()
+{
+ return shaderData.c_str();
+}
+
+
+
+
+

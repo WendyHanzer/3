@@ -3,18 +3,22 @@
 
 #include <string>
 
-class shader
+class shaderLoader
 {
  private:
-    char *shaderData;
+    std::string shaderData;
     std::string shaderName;
     std::string shaderFile;
-    bool isFragmentShader;
+    bool FragmentShader;
+    bool dataIsSet;
  public:
-    shader();
-    shader(std::string name, std::string file, bool isFrag);
-    ~shader();
+    shaderLoader();
+    shaderLoader(std::string name, std::string file, bool isFrag);
+    ~shaderLoader();
     void printStuff();
+    bool isFragmentShader() const;
+    bool isVertexShader() const;
+    const char* getShaderData();
 };
 
 #endif
