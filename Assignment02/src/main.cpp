@@ -43,6 +43,7 @@ void render();
 void update();
 void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
+void mouse(int button, int state, int x, int y);
 
 //--Resource management
 bool initialize();
@@ -51,6 +52,14 @@ void cleanUp();
 //--Random time things
 float getDT();
 std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
+
+//--Menu function
+void menu(int ID);
+bool canSpin;
+
+//--Rotation 
+bool vecIsUp = true;
+glm::vec3 rotationVec = glm::vec3(0.0,1.0,0.0);
 
 
 //--Main
@@ -144,21 +153,28 @@ void update()
     //total time
     static float angle = 0.0;
     static float rotateAngle = 0.0;
+
     float dt = getDT();// if you have anything moving, use dt.
 
-    //float rotationSpeed = dt * M_PI/2;
-
     angle += dt * M_PI/4; //move through 90 degrees a second
-    rotateAngle += dt * M_PI/2; // move the opposite direction at 45 degrees/second
+    if(vecIsUp)
+        {
+         rotateAngle += dt * M_PI/2; // move at 45 degrees/second
+        }
+    else
+        {
+         rotateAngle -= dt * M_PI/2; // move at 45 degrees/second
+        }
+    //model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
 
-    // move to origin
-    model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
+    if(canSpin)
+        {
+         // make cube orbit
+         model = glm::translate( glm::mat4(1.0f), glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
 
-    // rotate from origin
-    model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0));
-
-    // make cube orbit
-    model = glm::translate( model, glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
+         // rotate from origin
+         model = glm::rotate( model, rotateAngle, rotationVec);
+        }
 
     // Update the state of the scene
     glutPostRedisplay();//call the display callback
@@ -183,6 +199,19 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     if(key == 27)//ESC
     {
         glutLeaveMainLoop();
+    }
+    else if(key == 'a' || 'A')
+    {
+     if (vecIsUp)
+        {
+         vecIsUp = false;
+         //rotationVec.y = -1.0;
+        }
+     else
+        {
+         vecIsUp = true;
+         //rotationVec.y = 1.0;
+        }
     }
 }
 
@@ -325,7 +354,10 @@ bool initialize()
     //  if you will be having a moving camera the view matrix will need to more dynamic
     //  ...Like you should update it before you render more dynamic 
     //  for this project having them static will be fine
-    view = glm::lookAt( glm::vec3(0.0, 8.0, -16.0), //Eye Position
+    /*view = glm::lookAt( glm::vec3(0.0, 8.0, -16.0), //Eye Position
+                        glm::vec3(0.0, 0.0, 0.0), //Focus point
+                        glm::vec3(0.0, 1.0, 0.0)); //Positive Y is up*/
+    view = glm::lookAt( glm::vec3(0.0, 16.0, -1.0), //Eye Position
                         glm::vec3(0.0, 0.0, 0.0), //Focus point
                         glm::vec3(0.0, 1.0, 0.0)); //Positive Y is up
 
@@ -337,6 +369,20 @@ bool initialize()
     //enable depth testing
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+    ///////////////////////////////////////////////
+    // start program without spinning cube
+    canSpin = true;
+
+    glutCreateMenu(menu);
+    glutAddMenuEntry("start rotation", 1);
+    glutAddMenuEntry("stop rotation", 2);
+    glutAddMenuEntry("quit", 3);
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+    glutMouseFunc(mouse);
+    ///////////////////////////////////////////////
+
 
     //and its done
     return true;
@@ -358,3 +404,37 @@ float getDT()
     t1 = std::chrono::high_resolution_clock::now();
     return ret;
 }
+
+void menu(int ID)
+{
+ switch(ID)
+    {
+     case 1:
+        canSpin = true;
+        break;
+     case 2:
+        canSpin = false;
+        break;
+     case 3:
+        glutLeaveMainLoop();
+        break;
+    }
+ glutPostRedisplay();
+}
+
+void mouse(int button, int state, int x, int y)
+{
+ if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && vecIsUp == true)
+    {
+     vecIsUp = false;
+    }
+ else if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && vecIsUp == false)
+    {
+     vecIsUp = true;
+    }
+}
+
+
+
+
+
