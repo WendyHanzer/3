@@ -57,9 +57,9 @@ std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 void menu(int ID);
 bool canSpin;
 
-//--Rotation 
+//--Rotation direction flag
 bool vecIsUp = true;
-glm::vec3 rotationVec = glm::vec3(0.0,1.0,0.0);
+
 
 
 //--Main
@@ -165,7 +165,6 @@ void update()
         {
          rotateAngle -= dt * M_PI/2; // move at 45 degrees/second
         }
-    //model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
 
     if(canSpin)
         {
@@ -173,7 +172,7 @@ void update()
          model = glm::translate( glm::mat4(1.0f), glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
 
          // rotate from origin
-         model = glm::rotate( model, rotateAngle, rotationVec);
+         model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0);
         }
 
     // Update the state of the scene
@@ -205,12 +204,10 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
      if (vecIsUp)
         {
          vecIsUp = false;
-         //rotationVec.y = -1.0;
         }
      else
         {
          vecIsUp = true;
-         //rotationVec.y = 1.0;
         }
     }
 }
@@ -409,12 +406,15 @@ void menu(int ID)
 {
  switch(ID)
     {
+     // selection 1: let cube rotate
      case 1:
         canSpin = true;
         break;
+     // selection 2: stop cube from moving
      case 2:
         canSpin = false;
         break;
+     // selection 3: quit program
      case 3:
         glutLeaveMainLoop();
         break;
