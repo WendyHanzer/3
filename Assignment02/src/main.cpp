@@ -59,6 +59,7 @@ bool canSpin;
 
 //--Rotation direction flag
 bool vecIsUp = true;
+bool rotateCW = true;
 
 
 
@@ -156,23 +157,31 @@ void update()
 
     float dt = getDT();// if you have anything moving, use dt.
 
-    angle += dt * M_PI/4; //move through 90 degrees a second
-    if(vecIsUp)
-        {
-         rotateAngle += dt * M_PI/2; // move at 45 degrees/second
-        }
-    else
-        {
-         rotateAngle -= dt * M_PI/2; // move at 45 degrees/second
-        }
-
     if(canSpin)
         {
+         if(rotateCW)
+             {
+              angle += dt * M_PI/2; // move 45 degrees/second
+             }
+         else
+             {
+              angle -= dt * M_PI/2; // move 45 degrees/second
+             }
+
+         if(vecIsUp)
+             {
+              rotateAngle += dt * M_PI/2; // move at 45 degrees/second
+             }
+         else
+             {
+              rotateAngle -= dt * M_PI/2; // move at 45 degrees/second
+             }
+
          // make cube orbit
          model = glm::translate( glm::mat4(1.0f), glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
 
          // rotate from origin
-         model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0);
+         model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0));
         }
 
     // Update the state of the scene
@@ -201,13 +210,13 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     }
     else if(key == 'a' || 'A')
     {
-     if (vecIsUp)
+     if (rotateCW)
         {
-         vecIsUp = false;
+         rotateCW = false;
         }
      else
         {
-         vecIsUp = true;
+         rotateCW = true;
         }
     }
 }
