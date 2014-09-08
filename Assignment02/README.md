@@ -22,7 +22,7 @@ Right clicking will show the menu, giving the option to make the program:
 
     1) make the cuve orbit and rotate
 
-    2) stoo the cube from orbiting and rotating
+    2) stop the cube from orbiting and rotating
 
     3) end the program
 
