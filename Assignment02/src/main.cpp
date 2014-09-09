@@ -208,7 +208,7 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     {
         glutLeaveMainLoop();
     }
-    else if(key == 'a' || 'A')
+    else if(key == 'a' || key == 'A')
     {
      if (rotateCW)
         {

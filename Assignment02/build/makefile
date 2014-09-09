@@ -17,5 +17,5 @@ all: ../bin/Matrix
 	$(CC) $(CXXFLAGS) ../src/shaderLoader.cpp $(LIBS)
 
 clean:
-	rm -rf *o ../bin/Matrix
+	rm -rf *.o ../bin/Matrix
 
