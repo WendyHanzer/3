@@ -10,7 +10,7 @@ To build this example just
 
 >$ make
 
-The excutable will be put in bin
+The executable will be put in bin
 
 Commands
 --------
