@@ -34,15 +34,18 @@ GLint loc_color;
 
 //transform matrices
 glm::mat4 model;//obj->world each object should have its own model matrix
+glm::mat4 moonModel;
 glm::mat4 view;//world->eye
 glm::mat4 projection;//eye->clip
 glm::mat4 mvp;//premultiplied modelviewprojection
+glm::mat4 moonMVP;
 
 //--GLUT Callbacks
 void render();
 void update();
 void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
+void specialKeyboard(int key, int x_pos, int y_pos);
 void mouse(int button, int state, int x, int y);
 
 //--Resource management
@@ -52,6 +55,7 @@ void cleanUp();
 //--Random time things
 float getDT();
 std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
+float dt;
 
 //--Menu function
 void menu(int ID);
@@ -88,6 +92,7 @@ int main(int argc, char **argv)
     glutReshapeFunc(reshape);// Called if the window is resized
     glutIdleFunc(update);// Called if there is nothing else to do
     glutKeyboardFunc(keyboard);// Called if there is keyboard input
+    glutSpecialFunc(specialKeyboard);
 
     // Initialize all of our resources(shaders, geometry)
     bool init = initialize();
@@ -113,6 +118,7 @@ void render()
 
     //premultiply the matrix for this example
     mvp = projection * view * model;
+    moonMVP = projection * view * moonModel;
 
     //enable the shader program
     glUseProgram(program);
@@ -141,6 +147,18 @@ void render()
 
     glDrawArrays(GL_TRIANGLES, 0, 36);//mode, starting index, count
 
+////////////////////////////////////////////////////////////////////// moon code
+
+    // NOTE: do not need to reload moon model because we are using cube
+
+    // load moon into shader
+    glUniformMatrix4fv(loc_mvpmat, 1, GL_FALSE, glm::value_ptr(moonMVP));
+
+    // draw moon
+    glDrawArrays(GL_TRIANGLES, 0, 36);//mode, starting index, count
+
+//////////////////////////////////////////////////////////////////////
+
     //clean up
     glDisableVertexAttribArray(loc_position);
     glDisableVertexAttribArray(loc_color);
@@ -154,34 +172,48 @@ void update()
     //total time
     static float angle = 0.0;
     static float rotateAngle = 0.0;
+    static float moonOrbitAngle = 0.0;
+    static float moonRotateAngle = 0.0;
 
-    float dt = getDT();// if you have anything moving, use dt.
+    dt = getDT();// if you have anything moving, use dt.
 
     if(canSpin)
         {
          if(rotateCW)
              {
-              angle += dt * M_PI/2; // move 45 degrees/second
+              angle += dt * M_PI/4; 
+              moonOrbitAngle -= dt * M_PI/2;
              }
          else
              {
-              angle -= dt * M_PI/2; // move 45 degrees/second
+              angle -= dt * M_PI/4;
+              moonOrbitAngle += dt * M_PI/2;
              }
 
          if(vecIsUp)
              {
-              rotateAngle += dt * M_PI/2; // move at 45 degrees/second
+              rotateAngle += dt * M_PI/4;
+              moonRotateAngle -= dt * M_PI/2;
              }
          else
              {
-              rotateAngle -= dt * M_PI/2; // move at 45 degrees/second
+              rotateAngle -= dt * M_PI/4; 
+              moonRotateAngle += dt * M_PI/2;
              }
 
          // make cube orbit
-         model = glm::translate( glm::mat4(1.0f), glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
+         model = glm::translate( glm::mat4(1.0f), glm::vec3(7.0 * sin(angle), 0.0, 7.0 * cos(angle)));
 
          // rotate from origin
          model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0));
+
+         glm::vec3 planetPos = glm::vec3(model[3][0], model[3][1], model[3][2]);
+
+         moonModel = glm::translate( glm::mat4(1.0f), planetPos);
+
+         moonModel = glm::translate( moonModel, glm::vec3(4.0 * sin(moonOrbitAngle), 0.0, 4.0 * cos(moonOrbitAngle)));
+
+         moonModel = glm::rotate( moonModel, moonRotateAngle, glm::vec3(0.0,1.0,0.0));
         }
 
     // Update the state of the scene
@@ -205,9 +237,9 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
 {
     // Handle keyboard input
     if(key == 27)//ESC
-    {
-        glutLeaveMainLoop();
-    }
+        {
+         glutLeaveMainLoop();
+        }
     else if(key == 'a' || key == 'A')
     {
      if (rotateCW)
@@ -219,6 +251,26 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
          rotateCW = true;
         }
     }
+    else if(key == '-' || key == '_')
+        {
+         view = glm::translate(view, glm::vec3(100.0*dt,0.0,0.0));
+        }
+    else if(key == '=' || key == '+')
+        {
+         view = glm::translate(view, glm::vec3(-100.0*dt,0.0,0.0));
+        }
+}
+
+void specialKeyboard(int key, int x_pos, int y_pos)
+{
+    if(key == GLUT_KEY_RIGHT)
+        {
+         rotateCW = true;
+        }
+    else if(key == GLUT_KEY_LEFT)
+        {
+         rotateCW = false;
+        }
 }
 
 bool initialize()
@@ -360,12 +412,12 @@ bool initialize()
     //  if you will be having a moving camera the view matrix will need to more dynamic
     //  ...Like you should update it before you render more dynamic 
     //  for this project having them static will be fine
-    /*view = glm::lookAt( glm::vec3(0.0, 8.0, -16.0), //Eye Position
-                        glm::vec3(0.0, 0.0, 0.0), //Focus point
-                        glm::vec3(0.0, 1.0, 0.0)); //Positive Y is up*/
-    view = glm::lookAt( glm::vec3(0.0, 16.0, -1.0), //Eye Position
+    view = glm::lookAt( glm::vec3(0.0, 8.0, -16.0), //Eye Position
                         glm::vec3(0.0, 0.0, 0.0), //Focus point
                         glm::vec3(0.0, 1.0, 0.0)); //Positive Y is up
+    /*view = glm::lookAt( glm::vec3(0.0, 16.0, -1.0), //Eye Position
+                        glm::vec3(0.0, 0.0, 0.0), //Focus point
+                        glm::vec3(0.0, 1.0, 0.0)); //Positive Y is up*/
 
     projection = glm::perspective( 45.0f, //the FoV typically 90 degrees is good which is what this is set to
                                    float(w)/float(h), //Aspect Ratio, so Circles stay Circular
