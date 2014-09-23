@@ -2,7 +2,9 @@
 #include <GL/freeglut.h> // doing otherwise causes compiler shouting
 #include <iostream>
 #include <chrono>
-#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <vector>
 
 #define GLM_FORCE_RADIANS // added to remove warning messages about depreciaton
 #include <glm/glm.hpp>
@@ -38,6 +40,8 @@ glm::mat4 view;//world->eye
 glm::mat4 projection;//eye->clip
 glm::mat4 mvp;//premultiplied modelviewprojection
 
+std::vector<Vertex> geometry;
+
 //--GLUT Callbacks
 void render();
 void update();
@@ -45,17 +49,33 @@ void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
 
 //--Resource management
-bool initialize();
+bool initialize(char*);
 void cleanUp();
 
 //--Random time things
 float getDT();
 std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 
+// obj model loader
+bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices);
+
 
 //--Main
 int main(int argc, char **argv)
-{ 
+{
+    char* fName = new char[50];
+
+    // get fileName from command line
+    if(argc > 1)
+        {
+         strcpy(fName, argv[1]);
+        }
+    else
+        {
+         std::cout<<"[F] FAILED TO ADD OBJ FILE AS ARGUMENT"<<std::endl;
+         return -1;
+        }
+ 
     // Initialize glut
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
@@ -80,7 +100,7 @@ int main(int argc, char **argv)
     glutKeyboardFunc(keyboard);// Called if there is keyboard input
 
     // Initialize all of our resources(shaders, geometry)
-    bool init = initialize();
+    bool init = initialize(fName);
     if(init)
     {
         t1 = std::chrono::high_resolution_clock::now();
@@ -129,7 +149,7 @@ void render()
                            sizeof(Vertex),
                            (void*)offsetof(Vertex,color));
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);//mode, starting index, count
+    glDrawArrays(GL_TRIANGLES, 0, geometry.size());//mode, starting index, count
 
     //clean up
     glDisableVertexAttribArray(loc_position);
@@ -141,24 +161,23 @@ void render()
 
 void update()
 {
+
     //total time
     static float angle = 0.0;
     static float rotateAngle = 0.0;
     float dt = getDT();// if you have anything moving, use dt.
 
-    //float rotationSpeed = dt * M_PI/2;
-
-    angle += dt * M_PI/4; //move through 90 degrees a second
-    rotateAngle += dt * M_PI/2; // move the opposite direction at 45 degrees/second
-
-    // move to origin
-    model = glm::translate( glm::mat4(1.0f), glm::vec3(0.0,0.0,0.0));
-
-    // rotate from origin
-    model = glm::rotate( model, rotateAngle, glm::vec3(0.0,1.0,0.0));
-
+    angle += dt * M_PI/6; //move through 90 degrees a second
+    rotateAngle += dt * M_PI/6; // move the opposite direction at 45 degrees/second
+/*
     // make cube orbit
-    model = glm::translate( model, glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
+    model = glm::translate( glm::mat4(1.0f), glm::vec3(5.0 * sin(angle), 0.0, 5.0 * cos(angle)));
+*/
+    // rotate from origin
+    model = glm::rotate(glm::mat4(1.0f), rotateAngle, glm::vec3(0.0,1.0,0.0));
+
+
+    //model = glm::translate( glm::mat4(1.0f), glm::vec3(1,0,0));
 
     // Update the state of the scene
     glutPostRedisplay();//call the display callback
@@ -186,64 +205,21 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     }
 }
 
-bool initialize()
+bool initialize(char* fName)
 {
-    // Initialize basic geometry and shaders for this example
+    bool fileLoaded = loadObjModel(fName, geometry);
 
-    //this defines a cube, this is why a model loader is nice
-    //you can also do this with a draw elements and indices, try to get that working
-    Vertex geometry[] = { {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
+    // attempt to load model
+    if(!fileLoaded)
+        {
+         std::cerr << "[F] FAILED TO LOAD OBJ FILE!" << std::endl;
+         return false;
+        }
 
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}}
-                        };
     // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(geometry), geometry, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, geometry.size() * sizeof(Vertex), &geometry[0], GL_STATIC_DRAW);
 
     //--Geometry done
 
@@ -358,3 +334,90 @@ float getDT()
     t1 = std::chrono::high_resolution_clock::now();
     return ret;
 }
+
+bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
+{
+ std::vector<unsigned int> vertexIndices;
+ std::vector<Vertex> temp_vertices;
+
+
+ char lineHeader[128], garbage[128];
+ int res;
+ FILE * file = fopen(obj, "r");
+ printf("loading %s\n", obj);
+ if(file == NULL)
+    {
+     printf("[F] FAILURE FILE DOES NOT EXIST!\n");
+     return false;
+    }
+
+ while(1)
+    {
+     res = fscanf(file, "%s", lineHeader);
+     // if end of file or error, end loop
+     if(res <= 0)
+        {
+         break;
+        }
+     // otherwise keep parsing
+     else
+        {
+         if(strcmp(lineHeader, "v") == 0)
+            {
+             Vertex tempV;
+             fscanf(file, "%f %f %f\n", &(tempV.position[0]), 
+                                        &(tempV.position[1]), 
+                                        &(tempV.position[2]));
+
+             tempV.color[0] = 0.0f;
+             tempV.color[1] = 1.0f;
+             tempV.color[2] = 0.0f;
+
+             temp_vertices.push_back(tempV);
+            }
+         else if(strcmp(lineHeader, "f") == 0)
+            {
+             int vertexIndex[3];
+             int matches = fscanf(file, "%d %d %d\n", &vertexIndex[0], 
+                                                      &vertexIndex[1], 
+                                                      &vertexIndex[2]);
+             if(matches!=3)
+                {
+                 printf("File cannot be read, not is simple format\n");
+                 return false;
+                }
+
+             vertexIndices.push_back(vertexIndex[0]);
+             vertexIndices.push_back(vertexIndex[1]);
+             vertexIndices.push_back(vertexIndex[2]);
+            }
+         else 
+            {
+             fgets(garbage, 128, file);
+            }
+        }
+    }
+
+ // process input data
+ for(unsigned int i = 0; i < vertexIndices.size(); i++)
+    {
+     unsigned int vertexIndex = vertexIndices[i];
+
+     Vertex vert = temp_vertices[vertexIndex-1];
+
+     out_vertices.push_back(vert);
+    }
+
+ return true;
+}
+
+
+
+
+
+
+
+
+
+
+
