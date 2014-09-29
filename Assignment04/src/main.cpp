@@ -383,7 +383,7 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
                                                       &vertexIndex[2]);
              if(matches!=3)
                 {
-                 printf("File cannot be read, not is simple format\n");
+                 printf("File cannot be read, not is simple format :(\n");
                  return false;
                 }
 

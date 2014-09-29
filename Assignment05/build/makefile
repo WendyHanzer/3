@@ -1,6 +1,6 @@
 # Linux
 CC=g++
-LIBS= -lglut -lGLEW -lGL
+LIBS= -lglut -lGLEW -lGL -lassimp
 
 # Compiler flags
 CXXFLAGS= -g -Wall -std=c++0x -c

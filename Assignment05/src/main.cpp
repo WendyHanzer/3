@@ -11,6 +11,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> //Makes passing matrices to shaders easier
 
+
+#include <assimp/Importer.hpp> //includes the importer, which is used to read our obj file
+#include <assimp/scene.h> //includes the aiScene object
+#include <assimp/postprocess.h> //includes the postprocessing variables for the importer
+#include <assimp/color4.h> //includes the aiColor4 object, which is used to handle the colors from the mesh objects
+
 #include "shaderLoader.h"
 
 //--Data types
@@ -341,71 +347,89 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
  std::vector<Vertex> temp_vertices;
 
 
- char lineHeader[128], garbage[128];
- int res;
- FILE * file = fopen(obj, "r");
- printf("loading %s\n", obj);
- if(file == NULL)
+ Assimp::Importer Importer;
+
+ const aiScene* pScene = Importer.ReadFile(obj, aiProcess_Triangulate 
+                                            | aiProcess_GenSmoothNormals 
+                                            | aiProcess_FlipUVs);
+
+ aiMesh* mesh = pScene->mMeshes[0];
+
+ if(!pScene)
     {
-     printf("[F] FAILURE FILE DOES NOT EXIST!\n");
+     std::cout<<"Error parsing "<<obj/*<<": "<<Importer.GetErrorString*/<<std::endl;
      return false;
     }
 
- while(1)
+ for(unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
-     res = fscanf(file, "%s", lineHeader);
-     // if end of file or error, end loop
-     if(res <= 0)
+     const aiFace& face = mesh->mFaces[i];
+
+     aiVector3D tempPos1 = mesh->mVertices[face.mIndices[0]];
+     aiVector3D tempPos2 = mesh->mVertices[face.mIndices[1]];
+     aiVector3D tempPos3 = mesh->mVertices[face.mIndices[2]];
+
+     Vertex tempVertex;
+
+     // first point of triange
+     tempVertex.position[0] = tempPos1.x;
+     tempVertex.position[1] = tempPos1.y;
+     tempVertex.position[2] = tempPos1.z;
+
+     if (tempVertex.position[0] < 0)
         {
-         break;
+         tempVertex.color[0] = 1.0f;
+         tempVertex.color[1] = 0.0f;
+         tempVertex.color[2] = 0.0f;
         }
-     // otherwise keep parsing
      else
         {
-         if(strcmp(lineHeader, "v") == 0)
-            {
-             Vertex tempV;
-             fscanf(file, "%f %f %f\n", &(tempV.position[0]), 
-                                        &(tempV.position[1]), 
-                                        &(tempV.position[2]));
-
-             tempV.color[0] = 0.0f;
-             tempV.color[1] = 1.0f;
-             tempV.color[2] = 0.0f;
-
-             temp_vertices.push_back(tempV);
-            }
-         else if(strcmp(lineHeader, "f") == 0)
-            {
-             int vertexIndex[3];
-             int matches = fscanf(file, "%d %d %d\n", &vertexIndex[0], 
-                                                      &vertexIndex[1], 
-                                                      &vertexIndex[2]);
-             if(matches!=3)
-                {
-                 printf("File cannot be read, not is simple format\n");
-                 return false;
-                }
-
-             vertexIndices.push_back(vertexIndex[0]);
-             vertexIndices.push_back(vertexIndex[1]);
-             vertexIndices.push_back(vertexIndex[2]);
-            }
-         else 
-            {
-             fgets(garbage, 128, file);
-            }
+         tempVertex.color[0] = 0.0f;
+         tempVertex.color[1] = 1.0f;
+         tempVertex.color[2] = 0.0f;
         }
-    }
 
- // process input data
- for(unsigned int i = 0; i < vertexIndices.size(); i++)
-    {
-     unsigned int vertexIndex = vertexIndices[i];
+     out_vertices.push_back(tempVertex);
 
-     Vertex vert = temp_vertices[vertexIndex-1];
+     // second point of triange
+     tempVertex.position[0] = tempPos2.x;
+     tempVertex.position[1] = tempPos2.y;
+     tempVertex.position[2] = tempPos2.z;
 
-     out_vertices.push_back(vert);
+     if (tempVertex.position[0] < 0)
+        {
+         tempVertex.color[0] = 1.0f;
+         tempVertex.color[1] = 0.0f;
+         tempVertex.color[2] = 0.0f;
+        }
+     else
+        {
+         tempVertex.color[0] = 0.0f;
+         tempVertex.color[1] = 1.0f;
+         tempVertex.color[2] = 0.0f;
+        }
+
+     out_vertices.push_back(tempVertex);
+
+     // third point on triange
+     tempVertex.position[0] = tempPos3.x;
+     tempVertex.position[1] = tempPos3.y;
+     tempVertex.position[2] = tempPos3.z;
+
+     if (tempVertex.position[0] < 0)
+        {
+         tempVertex.color[0] = 1.0f;
+         tempVertex.color[1] = 0.0f;
+         tempVertex.color[2] = 0.0f;
+        }
+     else
+        {
+         tempVertex.color[0] = 0.0f;
+         tempVertex.color[1] = 1.0f;
+         tempVertex.color[2] = 0.0f;
+        }
+
+     out_vertices.push_back(tempVertex);
     }
 
  return true;
