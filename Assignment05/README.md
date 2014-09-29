@@ -25,3 +25,5 @@ The name of the model created in Blender is gameBoard.obj
 
 Using freeglut.h instead of glut.h
 
+Using assimp for model Loading
+
