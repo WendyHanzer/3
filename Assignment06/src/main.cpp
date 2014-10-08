@@ -17,6 +17,10 @@
 #include <assimp/postprocess.h> //includes the postprocessing variables for the importer
 #include <assimp/color4.h> //includes the aiColor4 object, which is used to handle the colors from the mesh objects
 
+//#include <Magick++.h>
+#include <Magick++/Blob.h>
+#include <Magick++/Image.h>
+
 #include "shaderLoader.h"
 
 //--Data types
@@ -24,13 +28,14 @@
 struct Vertex
 {
     GLfloat position[3];
-    GLfloat color[3];
+    GLfloat uv[2];
 };
 
 //--Evil Global variables
 //Just for this example
 int w = 640, h = 480;// Window size
 GLuint program;// The GLSL program handle
+GLuint gSampler;// sampler
 GLuint vbo_geometry;// VBO handle for our geometry
 
 //uniform locations
@@ -55,7 +60,7 @@ void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
 
 //--Resource management
-bool initialize(char*);
+bool initialize(char*,char*);
 void cleanUp();
 
 //--Random time things
@@ -63,22 +68,31 @@ float getDT();
 std::chrono::time_point<std::chrono::high_resolution_clock> t1,t2;
 
 // obj model loader
-bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices);
+bool loadObjModel(char* obj, char* tex, std::vector<Vertex> & out_vertices);
+void Bind();
 
+//---------------
+GLenum m_textureTarget;
+GLuint m_textureObj;
+Magick::Image* m_pImage;
+Magick::Blob m_blob;
+//---------------
 
 //--Main
 int main(int argc, char **argv)
 {
-    char* fName = new char[50];
+    char* fName = new char[256];
+    char* texName = new char[256];
 
     // get fileName from command line
-    if(argc > 1)
+    if(argc > 2)
         {
          strcpy(fName, argv[1]);
+         strcpy(texName, argv[2]);
         }
     else
         {
-         std::cout<<"[F] FAILED TO ADD OBJ FILE AS ARGUMENT"<<std::endl;
+         std::cout<<"[F] FAILED TO ADD OBJ FILE OR TECTURE AS ARGUMENT"<<std::endl;
          return -1;
         }
  
@@ -106,7 +120,7 @@ int main(int argc, char **argv)
     glutKeyboardFunc(keyboard);// Called if there is keyboard input
 
     // Initialize all of our resources(shaders, geometry)
-    bool init = initialize(fName);
+    bool init = initialize(fName, texName);
     if(init)
     {
         t1 = std::chrono::high_resolution_clock::now();
@@ -140,6 +154,7 @@ void render()
     glEnableVertexAttribArray(loc_position);
     glEnableVertexAttribArray(loc_color);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
+
     //set pointers into the vbo for each of the attributes(position and color)
     glVertexAttribPointer( loc_position,//location of attribute
                            3,//number of elements
@@ -153,7 +168,10 @@ void render()
                            GL_FLOAT,
                            GL_FALSE,
                            sizeof(Vertex),
-                           (void*)offsetof(Vertex,color));
+                           (void*)offsetof(Vertex,uv));
+
+    //TO-DO glBindTexture();
+    Bind();
 
     glDrawArrays(GL_TRIANGLES, 0, geometry.size());//mode, starting index, count
 
@@ -211,9 +229,9 @@ void keyboard(unsigned char key, int x_pos, int y_pos)
     }
 }
 
-bool initialize(char* fName)
+bool initialize(char* fName, char* texName)
 {
-    bool fileLoaded = loadObjModel(fName, geometry);
+    bool fileLoaded = loadObjModel(fName, texName, geometry);
 
     // attempt to load model
     if(!fileLoaded)
@@ -246,9 +264,12 @@ bool initialize(char* fName)
     glCompileShader(vertex_shader);
     //check the compile status
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &shader_status);
+    char buffer[512];
     if(!shader_status)
     {
+        glGetShaderInfoLog(vertex_shader, 512, NULL, buffer);
         std::cerr << "[F] FAILED TO COMPILE VERTEX SHADER!" << std::endl;
+        std::cerr << buffer << std::endl;
         return false;
     }
 
@@ -259,7 +280,9 @@ bool initialize(char* fName)
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &shader_status);
     if(!shader_status)
     {
+        glGetShaderInfoLog(fragment_shader, 512, NULL, buffer);
         std::cerr << "[F] FAILED TO COMPILE FRAGMENT SHADER!" << std::endl;
+        std::cerr << buffer << std::endl;
         return false;
     }
 
@@ -277,6 +300,10 @@ bool initialize(char* fName)
         return false;
     }
 
+    // add sampler to program
+    gSampler = glGetUniformLocation(program, "gSampler");
+    glUniform1i(gSampler, 0);
+
     //Now we set the locations of the attributes and uniforms
     //this allows us to access them easily while rendering
     loc_position = glGetAttribLocation(program,
@@ -288,10 +315,10 @@ bool initialize(char* fName)
     }
 
     loc_color = glGetAttribLocation(program,
-                    const_cast<const char*>("v_color"));
+                    const_cast<const char*>("v_texture"));
     if(loc_color == -1)
     {
-        std::cerr << "[F] V_COLOR NOT FOUND" << std::endl;
+        std::cerr << "[F] V_TEXTURE NOT FOUND" << std::endl;
         return false;
     }
 
@@ -341,12 +368,14 @@ float getDT()
     return ret;
 }
 
-bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
+bool loadObjModel(char* obj, char* tex, std::vector<Vertex> & out_vertices)
 {
  std::vector<unsigned int> vertexIndices;
  std::vector<Vertex> temp_vertices;
 
-
+ aiString path;
+ //Magick::Image* m_pImage;
+ //Magick::Blob m_blob;
  Assimp::Importer Importer;
 
  const aiScene* pScene = Importer.ReadFile(obj, aiProcess_Triangulate 
@@ -354,13 +383,38 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
                                             | aiProcess_FlipUVs);
 
  aiMesh* mesh = pScene->mMeshes[0];
-
+ aiMaterial* mtl = pScene->mMaterials[0];
+ mtl->GetTexture(aiTextureType_DIFFUSE, 1, &path);
+ //std::cout<<"path: "<<path.data<<std::endl;
+ //std::cout<<pScene->mNumMeshes<<" "<<pScene->mNumMaterials<<std::endl;
  if(!pScene)
     {
-     std::cout<<"Error parsing "<<obj/*<<": "<<Importer.GetErrorString*/<<std::endl;
+     std::cout<<"Error parsing "<<obj<<std::endl;
      return false;
     }
 
+ try 
+ {
+   m_pImage = new Magick::Image(tex);
+   m_pImage->write(&m_blob, "RGBA");
+ }
+ catch (Magick::Error& Error) 
+ {
+   std::cout << "Error loading texture '" << tex << "': " << Error.what() << std::endl;
+   return false;
+ }
+
+//-----------------------------------------------------------------------
+ glGenTextures(1, &m_textureObj);
+ glBindTexture(m_textureTarget, m_textureObj);
+ glTexImage2D(m_textureTarget, 0, GL_RGBA, m_pImage->columns(), m_pImage->rows(), 0, GL_RGBA, GL_UNSIGNED_BYTE, m_blob.data());
+ glTexParameterf(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+ glTexParameterf(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);    
+ glBindTexture(m_textureTarget, 0);
+//-----------------------------------------------------------------------
+
+
+ //std::cout<<"rows: "<<m_pImage->rows()<<std::endl;
  for(unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
      const aiFace& face = mesh->mFaces[i];
@@ -369,6 +423,10 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
      aiVector3D tempPos2 = mesh->mVertices[face.mIndices[1]];
      aiVector3D tempPos3 = mesh->mVertices[face.mIndices[2]];
 
+     aiVector3D tempUV1 = mesh->mTextureCoords[0][face.mIndices[0]];
+     aiVector3D tempUV2 = mesh->mTextureCoords[0][face.mIndices[1]];
+     aiVector3D tempUV3 = mesh->mTextureCoords[0][face.mIndices[2]];
+
      Vertex tempVertex;
 
      // first point of triange
@@ -376,18 +434,8 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
      tempVertex.position[1] = tempPos1.y;
      tempVertex.position[2] = tempPos1.z;
 
-     if (tempVertex.position[0] < 0)
-        {
-         tempVertex.color[0] = 1.0f;
-         tempVertex.color[1] = 0.0f;
-         tempVertex.color[2] = 0.0f;
-        }
-     else
-        {
-         tempVertex.color[0] = 0.0f;
-         tempVertex.color[1] = 1.0f;
-         tempVertex.color[2] = 0.0f;
-        }
+     tempVertex.uv[0] = tempUV1.x;
+     tempVertex.uv[1] = tempUV1.y;
 
      out_vertices.push_back(tempVertex);
 
@@ -396,18 +444,8 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
      tempVertex.position[1] = tempPos2.y;
      tempVertex.position[2] = tempPos2.z;
 
-     if (tempVertex.position[0] < 0)
-        {
-         tempVertex.color[0] = 1.0f;
-         tempVertex.color[1] = 0.0f;
-         tempVertex.color[2] = 0.0f;
-        }
-     else
-        {
-         tempVertex.color[0] = 0.0f;
-         tempVertex.color[1] = 1.0f;
-         tempVertex.color[2] = 0.0f;
-        }
+     tempVertex.uv[0] = tempUV2.x;
+     tempVertex.uv[1] = tempUV2.y;
 
      out_vertices.push_back(tempVertex);
 
@@ -416,18 +454,8 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
      tempVertex.position[1] = tempPos3.y;
      tempVertex.position[2] = tempPos3.z;
 
-     if (tempVertex.position[0] < 0)
-        {
-         tempVertex.color[0] = 1.0f;
-         tempVertex.color[1] = 0.0f;
-         tempVertex.color[2] = 0.0f;
-        }
-     else
-        {
-         tempVertex.color[0] = 0.0f;
-         tempVertex.color[1] = 1.0f;
-         tempVertex.color[2] = 0.0f;
-        }
+     tempVertex.uv[0] = tempUV3.x;
+     tempVertex.uv[1] = tempUV3.y;
 
      out_vertices.push_back(tempVertex);
     }
@@ -435,6 +463,11 @@ bool loadObjModel(char* obj, std::vector<Vertex> & out_vertices)
  return true;
 }
 
+void Bind()
+{
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(m_textureTarget, m_textureObj);
+}
 
 
 

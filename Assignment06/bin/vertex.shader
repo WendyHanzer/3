@@ -1,8 +1,14 @@
-attribute vec3 v_position;
-attribute vec3 v_color;
-varying vec3 color;
+#version 330
+
+in vec3 v_position;
+in vec2 v_texture;
+
+out vec4 gl_Position;
+out vec2 tex_coords;
+
 uniform mat4 mvpMatrix;
-void main(void){
-gl_Position = mvpMatrix * vec4(v_position, 1.0);
-color = v_color;
+
+void main(){
+ gl_Position = mvpMatrix * vec4(v_position,1.0);
+ tex_coords = v_texture;
 }

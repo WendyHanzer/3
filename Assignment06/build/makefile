@@ -1,9 +1,9 @@
 # Linux
 CC=g++
-LIBS= -lglut -lGLEW -lGL -lassimp
+LIBS= -lglut -lGLEW -lGL -lassimp `Magick++-config --cppflags --cxxflags --ldflags --libs`
 
 # Compiler flags
-CXXFLAGS= -g -Wall -std=c++0x -c
+CXXFLAGS= -g -Wall -std=c++0x -c `Magick++-config --cppflags --cxxflags --ldflags --libs`
 
 all: ../bin/Matrix
 
