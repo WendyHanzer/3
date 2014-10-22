@@ -1,18 +1,6 @@
 Chris Forkner Assignment 06
 ========================================
 
-*********************************
-
-NOTE
-
-This project is incomplete :(
-
-I will probably be talking to one of your guys about what I didn't do right at some point
-
-*********************************
-
-
-
 Building This Example
 ---------------------
 
